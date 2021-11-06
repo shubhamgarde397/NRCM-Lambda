@@ -14,13 +14,21 @@ import re
 # cluster = MongoClient(consts.mongoConnectionString)
 # db = cluster['NRCM_Information']
 
-def connectionString(user):
+def connectionString(user,username):
     if user == 1:#Admin
-        return "NRCM_Information"
+        if username =='shubham':
+            return "NRCM_Information"
+        else:
+            return "NRCM_Testing"
     elif user == 2:#HR
-        return "NRCM_Interview"
+        return "NRCM_Testing"
     else:#Development
         return "NRCM_Testing"
+def returnObjectIdArray(data):
+    arr=[]
+    for i in data:
+        arr.append(ObjectId(i))
+    return arr
 
 def constants(event):
     method =event['method'].split(',')[0] if len(event['method'].split(','))>1 else event['method']
@@ -65,6 +73,8 @@ def responser(event,tableName,_id,many=''):
         return {'_id': '','Status':'InsertDuplicate','StatusToSend':'Duplicate Entry Found.'}
     elif tableName == 'partyPayment':
         return {'Status':'PaymentInsert'}
+    elif tableName == 'MailDetails':
+        return {'_id':_id.inserted_id,'Status':'MailInsert'}
     elif tableName == 'ignore':
         return {'_id': '','Status':'Ignore','StatusToSend':'Server Error dx0562FrCCx!404O. Unknown Error Occured, Server shutdown'}
         
@@ -73,7 +83,7 @@ def insertOrUpdate(tableName,event,method,many='',updatePrint=False):
         if tableName == 'villagenames':
             return {'village_name': event['village_name']}
         elif tableName == 'ownerdetails':
-            return {'truckno': event['truckno'],'oname': event['oname'],'pan': event['pan'],'contact': event['contact'],'accountDetails':event['accountDetails'],'preferences':event['preferences'],'reference':event['reference']}
+            return {'truckno': event['truckno'],'oname': event['oname'],'pan': event['pan'],'contact': event['contact'],'drivingLic':event['drivingLic'],'regCard':event['regCard'],'accountDetails':event['accountDetails'],'preferences':event['preferences'],'reference':event['reference']}
         elif tableName == 'gstdetails':
             return {'name': event['name'],'gst': event['gst'],'dest': event['dest']}
         elif tableName == 'regularparty':
@@ -91,12 +101,14 @@ def insertOrUpdate(tableName,event,method,many='',updatePrint=False):
                 #     return {'truckData':event['truckData'],'todayDate':event['todayDate'],'bankName':event['bankName'],'ifsc':event['ifsc'],'accountNumber':event['accountNumber'],'accountName':event['accountName'],'comments':event['comments'],'print':event['print']}
         elif tableName == 'partyPayment':
             return event['partyData']
+        elif tableName == 'MailDetails':
+            return {'partyid': event['partyid'],'loadingFrom': event['loadingFrom'],'loadingTo': event['loadingTo'],'paymentFrom': event['paymentFrom'],'paymentTo': event['paymentTo'],'balanceFollowMsg': event['balanceFollowMsg'],'balanceFollowAmount': event['balanceFollowAmount'],'mailSentDate': event['mailSentDate']}
         elif tableName == 'turnbook':
             if method == 'insert':
-                return {"placeid":event["placeid"],"loadingDate":event['loadingDate'],"ownerid":event["ownerid"],"partyid":event["partyid"],"partyType":event["partyType"],"turnbookDate":event["turnbookDate"],"entryDate":event["entryDate"],"datetruck":event['turnbookDate']+'_'+event['truckno'],"lrno":event['lrno'],"advance":event['advance'],"balance":event['balance'],"hamt":event['hamt'],"pochDate":event['pochDate'],"pochPayment":event['pochPayment'],"pgno":event['pgno'],"input":event['input']}
+                return {"placeid":event["placeid"],"loadingDate":event['loadingDate'],"ownerid":event["ownerid"],"partyid":event["partyid"],"partyType":event["partyType"],"turnbookDate":event["turnbookDate"],"entryDate":event["entryDate"],"datetruck":event['turnbookDate']+'_'+event['truckno'],"lrno":event['lrno'],"advance":event['advance'],"balance":event['balance'],"hamt":event['hamt'],"pochDate":event['pochDate'],"pochPayment":event['pochPayment'],"pgno":event['pgno'],"input":event['input'],"paymentid":event['paymentid']}
             if method == 'update':
                 if turnbookUpdateNumber==1:
-                    return {"placeid":event["placeid"],"loadingDate":event['loadingDate'],"lrno":event["lrno"],"ownerid":event["ownerid"],"partyid":event["partyid"],"partyType":event["partyType"],"turnbookDate":event["turnbookDate"],"entryDate":event["entryDate"],"hamt":event["hamt"],"advance":event["advance"],"balance":event["balance"],"pochDate":event["pochDate"],"pochPayment":event["pochPayment"]}
+                    return {"placeid":event["placeid"],"loadingDate":event['loadingDate'],"lrno":event["lrno"],"ownerid":event["ownerid"],"partyid":event["partyid"],"partyType":event["partyType"],"turnbookDate":event["turnbookDate"],"entryDate":event["entryDate"],"hamt":event["hamt"],"advance":event["advance"],"balance":event["balance"],"pochDate":event["pochDate"],"pochPayment":event["pochPayment"],"pgno":event['pgno'],"paymentid":event['paymentid']}
                 elif turnbookUpdateNumber==2:
                     return {"placeid":event["placeid"],"lrno":event["lrno"],"partyid":event["partyid"],"hamt":event["hamt"]}
                 else:
@@ -153,17 +165,17 @@ def getPaymentPipeline(event):
     if type == 1:
         paymentpipeline=consts.paymentpipeline2
         paymentpipeline=removeMatch(paymentpipeline)
-        paymentpipeline.insert(0,{'$match': {'partyid':event['partyid']}})
+        paymentpipeline.insert(0,{'$match': {'partyid':{'$in':event['partyid']},'done':False}})
         return paymentpipeline
     elif type == 2:
         paymentpipeline=consts.paymentpipeline2
         paymentpipeline=removeMatch(paymentpipeline)
-        paymentpipeline.insert(0,{'$match':{'$and':[{'date':{'$gte':event['from']}},{'date':{'$lte':event['to']}}]}})
+        paymentpipeline.insert(0,{'$match':{'$and':[{'date':{'$gte':event['from']}},{'date':{'$lte':event['to']}},{'done':False}]}})
         return paymentpipeline
     elif type == 3:
         paymentpipeline=consts.paymentpipeline2
         paymentpipeline=removeMatch(paymentpipeline)
-        paymentpipeline.insert(0,{'$match':{'$and':[{'date':{'$gte':event['from']}},{'date':{'$lte':event['to']}},{'partyid':event['partyid']}]}})
+        paymentpipeline.insert(0,{'$match':{'$and':[{'date':{'$gte':event['from']}},{'date':{'$lte':event['to']}},{'partyid':{'$in':event['partyid']}},{'done':False}]}})
         return paymentpipeline
     
 def removeMatch(pipeline):
@@ -188,9 +200,6 @@ def convertToDict(lst):
     return res_dct
 
 def completeTheMonth(arr):
-    print(arr)
-    print(arr[0])
-    # print(arr[0]['_id'][:4])
     tp=[]
     j=0
     y = str(arr[0]['_id'][:4])

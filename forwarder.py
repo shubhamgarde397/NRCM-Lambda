@@ -14,6 +14,17 @@ import insert
 import connection
 import dynamicConstants
 import partyPayment
+import charts
+import report
+import singleTruck
+#
+#
+#
+#Very impornatn, I have changed the dynamic Constants
+#And Angular turnbook-main-display line no 
+#
+#
+#
 
 def data(event):
     method = dynamicConstants.dynamicC(event,'method')
@@ -26,6 +37,7 @@ def data(event):
     toDate = dynamicConstants.dynamicC(event,'toDate')
     balanceHireDisplayType = dynamicConstants.dynamicC(event,'balanceHireDisplayType')
     turnbookUpdateNumber = dynamicConstants.dynamicC(event,'turnbookUpdateNumber')
+    addtotbids = dynamicConstants.dynamicC(event,'addtotbids')
     paymentpipeline=consts.paymentpipeline
     paymentpipeline.insert(0,{'$match': {'$and': [{'date': {'$gte': fromDate, '$lte': toDate}}, {'partyid': partyid}]}})
     tables = consts.tables
@@ -36,41 +48,25 @@ def data(event):
     user=event['user']
     tempResponse = []
     tableName = event['tablename'] if (method!='display') and (method!='displaynew') else ''
+    cluster = connection.cluster(functions.connectionString(event['typeofuser'],event['user']),event['user'])
+    db = connection.db(event['typeofuser'],event['user'])
     
-    # cluster = connection.cluster
-    # db = connection.db
-    
-    cluster = connection.cluster(functions.connectionString(event['typeofuser']))
-    db = connection.db(event['typeofuser'])
+    if addtotbids == True:
+        #write query here to add tb: _id to PartyPayment tbids.
+        res1 = db['partyPayment'].update_one({'_id': ObjectId(event['paymentid'])}, {'$push': {'tbids':event['_id']}})        
     
     if insider == 'new':
         event['datetruck'] = event['turnbookDate']+'_'+event['truckno']
         try:
-            newevent={"truckno": event['truckno'],"reference": [],"accountDetails": [],"personalDetails": "","oname":"","pan":"","reference":"","contact":[],"preferences":[]}
+            newevent={"truckno": event['truckno'],"reference": [],"accountDetails": [],"personalDetails": "","oname":"","pan":"","drivingLic":"","regCard":"","reference":"","contact":[],"preferences":[]}
             _id = db['ownerdetails'].insert_one(functions.insertOrUpdate('ownerdetails',newevent,'insert'))
             truckid = json.loads(json.dumps(functions.responser(event,'ownerdetails',_id), default=functions.json_unknown_type_handler))
             event['ownerid']=truckid['_id']
         except pymongo.errors.DuplicateKeyError:
             tempResponse = functions.responser('','','')
-            tempResponse = functions.responser('','ignore','')
+            # tempResponse = functions.responser('','ignore','')
             a = json.loads(json.dumps(tempResponse, default=functions.json_unknown_type_handler))
             return a
-        else:
-            try:
-                _id = db[functions.createColName(tableName,event,['01','02','03'])].insert_one(functions.insertOrUpdate(tableName,event,'insert'))
-                tempResponse = functions.responser(event,tableName,_id)
-                print(tempResponse)
-                a = json.loads(json.dumps(tempResponse, default=functions.json_unknown_type_handler))
-                print(a)
-                if insider == 'new':
-                    a['_id'] += '+'+event['ownerid'] 
-                return a
-            except pymongo.errors.DuplicateKeyError:
-                tempResponse = functions.responser('','','')
-                a = json.loads(json.dumps(tempResponse, default=functions.json_unknown_type_handler))
-                if insider == 'new':
-                    a['_id'] += '+'+event['ownerid'] 
-                return a
                 
     if method == 'displaynew':
         role=event['consider'][0]
@@ -151,9 +147,7 @@ def data(event):
             try:
                 _id = db[functions.createColName(tableName,event,['01','02','03'])].insert_one(functions.insertOrUpdate(tableName,event,'insert'))
                 tempResponse = functions.responser(event,tableName,_id)
-                print(tempResponse)
                 a = json.loads(json.dumps(tempResponse, default=functions.json_unknown_type_handler))
-                print(a)
                 if insider == 'new':
                     a['_id'] += '+'+event['ownerid'] 
                 return a
@@ -169,7 +163,7 @@ def data(event):
         return {'Status': "Delete"}
         
     elif method == 'updatePoch':#setting poch Payment to false
-        res1 = db[functions.createColName(tableName,event,['01','02','03'])].update_one({'_id': ObjectId(event['_id'])}, {'$set': {'pochPayment':False,'pochDate':''}})
+        res1 = db[functions.createColName(tableName,event,['01','02','03'])].update_one({'_id': ObjectId(event['_id'])}, {'$set': {'pochPayment':False,'pochDate':'','pgno':int('999') }})
         return {'Status': "Update",'Message':'Updated'}
     
     elif method == 'insertmany':
@@ -180,8 +174,13 @@ def data(event):
         else:
             try:
                 _id = db[functions.createColName(tableName,event,['01','02','03'])].insert_many(functions.insertOrUpdate(tableName,event,'insert',many))
+                #This below code is to update the pageno in Turnbook table  while adding Balance Hire
+                if tableName == 'BalanceHire':
+                    for i in range(0,len(event['ids'])):
+                        res1 = db[functions.createColName('turnbook',event,['01','02','03'])].update_many({'_id':ObjectId(event['ids'][i])}, {'$set': {'pgno':event['bhData'][0]['truckData'][i]['pageno']}})
                 tempResponse = functions.responser(event,tableName,_id,many)
                 a = json.loads(json.dumps(tempResponse, default=functions.json_unknown_type_handler))
+                #The below code is to update the pochdate and pochPayment in Turnbook while adding Balance Hire
                 if many=='many':
                     res1 = db[functions.createColName('turnbook',event,['01','02','03'])].update_many({'_id':{'$in':list(map(ObjectId,event['ids']))}}, {'$set': {'pochPayment':True,'pochDate':event['todayDate']}})
                     
@@ -200,6 +199,113 @@ def data(event):
         return json.loads(json.dumps(arr, default=functions.json_unknown_type_handler))
     elif method == 'partyPaymentPDF':
         arr = {'Data':[],'Status':'DisplayPP'}
-        res1 = db['partyPayment'].aggregate(partyPayment.createPipeline(consts.pipelinePaymentPP1,'p1',event))
+        # res1 = db['partyPayment'].aggregate(partyPayment.createPipeline(consts.pipelinePaymentPP1,'p1',event))
         res2 = db['TurnBook_2020_2021'].aggregate(partyPayment.createPipeline(consts.pipelinePaymentPP2,'p2',event))
-        return json.loads(json.dumps(partyPayment.pipelineValue(event,res1,res2,arr), default=functions.json_unknown_type_handler))
+        return json.loads(json.dumps(partyPayment.pipelineValue(event,res2,arr), default=functions.json_unknown_type_handler))
+    elif method == 'partyPaymentPDFForParty':
+        arr = {'Data':[],'Status':'DisplayPP'}
+        res1 = db['partyPayment'].aggregate(partyPayment.createPipelineForParty(consts.pipelinePaymentPP1,'p1',event))
+        res2 = db['TurnBook_2020_2021'].aggregate(partyPayment.createPipelineForParty(consts.pipelinePaymentPP2,'p2',event))
+        return json.loads(json.dumps(partyPayment.pipelineValueForParty(event,res1,res2,arr), default=functions.json_unknown_type_handler))    
+        
+    elif method == 'chart':
+        arr = {'Data':[],'Status':'Chart'}
+        selectedPipeline=charts.pipelineValue(event)
+        res1 = db['TurnBook_2020_2021'].aggregate(selectedPipeline)
+        for i in res1:
+            arr['Data'].append(i)
+        return json.loads(json.dumps(arr, default=functions.json_unknown_type_handler))
+    elif method == 'BalanceHireSingleUpdate':
+        data='truckData.'+event['index']+'.'
+        res1 = db[functions.createColName(tableName,event,['01','02','03'])].update_one({'_id': ObjectId(event['id'])}, {'$set': {data+'date':event['date'],data+'amount':event['amount'],data+'pageno':event['pageno'],data+'truckno':event['truckno']}})
+        return {'Status': "Update",'Message':'Updated'}
+    elif method == 'BalanceHireSingleUpdateToDelete':
+        res1 = db[functions.createColName(tableName,event,['01','02','03'])].update_one({"_id":ObjectId(event['id'])},{'$unset':{"truckData."+event['index']:1}})
+        res2 = db[functions.createColName(tableName,event,['01','02','03'])].update_one({"_id":ObjectId(event['id'])},{'$pull':{"truckData":None}})
+        return {'Status': "Delete"}
+    elif method == 'BalanceHireSingleUpdateToAdd':
+        res1 = db[functions.createColName(tableName,event,['01','02','03'])].update_one({"_id":ObjectId(event['id'])},{'$addToSet':{"truckData":{"date":event['date'],"truckno":event['truckno'],"amount":event['amount'],"pageno":event['pageno']}}})
+        if res1.modified_count==1:
+            return {'Status': "Update",'Message':'Updated'}
+        else:
+            return {'Status': "Update",'Message':'Cannot add duplicate records'}
+    elif method == 'receivedReport':
+        arr = {'Data':[],'Status':'Chart'}
+        selectedPipeline=turnbook.pipelineValueReport(event,'')
+        res1 = db['TurnBook_2020_2021'].aggregate(selectedPipeline)
+        for i in res1:
+            arr['Data'].append(i)
+        return json.loads(json.dumps(arr, default=functions.json_unknown_type_handler))
+    elif method == 'pipelinePan':
+        arr = {'Data':[],'Status':'Chart'}
+        selectedPipeline=report.pipelineValue(event)
+        res1 = db['TurnBook_2020_2021'].aggregate(selectedPipeline)
+        for i in res1:
+            arr['Data'].append(i)
+        return json.loads(json.dumps(arr, default=functions.json_unknown_type_handler))
+    elif method == "singleTruck":
+        arr = {'Data':[],'Status':'SingleTruck'}
+        selectedPipeline=singleTruck.pipelineValue(event)
+        res1 = db['TurnBook_2020_2021'].aggregate(selectedPipeline)
+        for i in res1:
+            arr['Data'].append(i)
+        return json.loads(json.dumps(arr, default=functions.json_unknown_type_handler))
+    elif method == "displayA14Days":
+        pipelineTurn=turnbook.pipelineValue(event,'2021-04-01')
+        col=db[functions.createColName(tableName,event,['01','02','03'])]
+        arr = {'Data':[],'Status':'DisplayTB'}
+        res=col.aggregate(pipelineTurn)
+        for i in res:
+            arr['Data'].append(i)
+        return json.loads(json.dumps(arr, default=functions.json_unknown_type_handler))
+    elif method == 'displayMail':
+        pipelineTurn=consts.pipelineMailDisplay
+        col=db[functions.createColName(tableName,event,['01','02','03'])]
+        arr = {'Data':[],'Status':'DisplayCommon'}
+        res=col.aggregate(pipelineTurn)
+        for i in res:
+            arr['Data'].append(i)
+        return json.loads(json.dumps(arr, default=functions.json_unknown_type_handler))
+    elif method == 'deepDetails1':
+        arr = {'Data':{'Detail1':[],'Detail2':[],'Detail3':[],'Detail4':[],'Detail5':[]},'Status':'DisplayCommon'}
+        objects=['','Detail1','Detail2','Detail3','Detail4','Detail5']
+        for j in range(1,6):
+            pipelineTurn=report.pipelineDeepValue(event,j)
+            col=db[functions.createColName(tableName,event,['01','02','03'])]
+            res=col.aggregate(pipelineTurn)
+            for i in res:
+                arr['Data'][objects[j]].append(i)
+        return json.loads(json.dumps(arr, default=functions.json_unknown_type_handler))
+    elif method == 'deepDetails':
+        arr = {'Detail1':[],'Detail2':[],'Detail3':[],'Detail4':[],'Detail5':[],'Status':'DisplayCommon1'}
+        objects=['','Detail1','Detail2','Detail3','Detail4','Detail5']
+        for j in range(1,6):
+            pipelineTurn=report.pipelineDeepValue(event,j)
+            col=db[functions.createColName(tableName,event,['01','02','03'])]
+            res=col.aggregate(pipelineTurn)
+            for i in res:
+                arr[objects[j]].append(i)
+        return json.loads(json.dumps(arr, default=functions.json_unknown_type_handler))
+    elif method == 'PartyDeleteSingleId':
+        res1 = db['partyPayment'].update_one({"_id":ObjectId(event['id'])},{'$unset':{"tbids."+str(event['index']):1}})
+        res2 = db['partyPayment'].update_one({"_id":ObjectId(event['id'])},{'$pull':{"tbids":None}})
+        res3 = db['TurnBook_2020_2021'].update_one({"_id":ObjectId(event['truckid'])},{'$set':{"paymentid":"617114b7baa1bf3b9386a6a9"}})
+        return {'Status': "Delete"}
+    elif method == 'addIdsToPartyAndTB':
+        res1 = db['partyPayment'].update_one({"_id":ObjectId(event['id'])},{'$addToSet':{'tbids':{'$each':event['tbids']}}})
+        res2 = db['TurnBook_2020_2021'].update_many({'_id':{'$in':functions.returnObjectIdArray(event['tbids'])}},{'$set':{"paymentid":event['id']}})
+        return {'Status': "Update",'Message':'Added'}
+    elif method == 'pendingPayment':
+        pipelineTurn=[
+    {'$match': {'paymentid': '617114b7baa1bf3b9386a6a9','partyid':event['partyid']}}, 
+    {'$addFields': {'newpartyid': {'$toObjectId': '$partyid'}}}, 
+    {'$lookup': {'from': 'gstdetails', 'localField': 'newpartyid', 'foreignField': '_id', 'as': 'partyDetails'}}, 
+    {'$project': {'data': {'$concat': ['$loadingDate', '_', '$datetruck', '_', {'$convert': {'input': '$_id', 'to': 2, 'onError': '', 'onNull': ''}}]}, 'lrno': 1, 'partyName': {'$arrayElemAt': ['$partyDetails.name', 0]}}}]
+        col=db['TurnBook_2020_2021']
+        arr = {'Data':[],'Status':'DisplayCommon'}
+        res=col.aggregate(pipelineTurn)
+        for i in res:
+            arr['Data'].append(i)
+        return json.loads(json.dumps(arr, default=functions.json_unknown_type_handler))
+        
+        

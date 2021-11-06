@@ -1,5 +1,5 @@
 import forwarder
-import eventFile
+import eventFile#Comment this before deployment
 
 def lambda_handler(event, context):
     event=eventFile.eventName#Comment this before deployment

@@ -1,10 +1,10 @@
 def dynamicC(event,type):
     if type=='method':
-        return event['method'].split(',')[0] if len(event['method'].split(','))>1 else event['method']
+        return event['method'].split('.')[0] if len(event['method'].split('.'))>1 else event['method']
     elif type=='many':
         return event['method'].split('.')[1] if len(event['method'].split('.'))>1 else ''
     elif type=='insider':
-        return event['method'].split(',')[1] if len(event['method'].split(','))>1 else ''
+        return event['method'].split('.')[1] if len(event['method'].split('.'))>1 else ''
     elif type=='username':
       return event.get('username') if event.get('username')!=None else ''
     elif type=='turnbookdate':
@@ -19,4 +19,5 @@ def dynamicC(event,type):
         return event.get('type') if event.get('type')!=None else ''
     elif type=='turnbookUpdateNumber':
         return event.get('part') if event.get('part')!=None else 1
-     
+    elif type == 'addtotbids':
+        return event.get('addtotbids') if event.get('addtotbids')!=None else False

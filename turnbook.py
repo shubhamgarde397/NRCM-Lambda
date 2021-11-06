@@ -12,12 +12,17 @@ import re
 
 def pipelineValue(event,turnbookdate):
     pipelineTurn = []
-    pipelineTurn = consts.pipelineTurn
+    if event['display'] == '0':
+        pipelineTurn = consts.pipelineTurnS14
+    else:
+        pipelineTurn = consts.pipelineTurn
     try:
         a=pipelineTurn[0]['$match']
         pipelineTurn.pop(0)
     except KeyError:
         pass
+    if event['display'] == '0':
+        pipelineTurn.insert(0,{'$match': {'$and': [{'turnbookDate': {'$gte': event['turnbookDateS14']}}, {'turnbookDate': {'$lte':event['turnbookDate']}}]}})
     if event['display'] == '1':
         pipelineTurn.insert(0,{'$match': {'$and': [{'turnbookDate': {'$gte': turnbookdate}}, {'loadingDate': ''}]}})
     if event['display'] == '2':
@@ -27,7 +32,7 @@ def pipelineValue(event,turnbookdate):
     if event['display'] == '5':
         pipelineTurn.insert(0,{'$match': {'$and': [{'loadingDate': {'$gte': turnbookdate+'-01', '$lte': turnbookdate+'-31'}}, {'partyType': 'NRCM'}]}})
     if event['display'] == '6':
-        pipelineTurn.insert(0,{'$match': {'pochPayment': False}})
+        pipelineTurn.insert(0,{'$match': {'$and':[{'pochPayment': False},{'loadingDate':{'$ne':''}},{'partyType':{'$in':['','NRCM','NR']}}]}})
     if event['display'] == '7':
         pipelineTurn.insert(0,{'$match': {'loadingDate': re.compile(event['date']), 'pochPayment': True}})
     if event['display'] == '8':
@@ -35,4 +40,17 @@ def pipelineValue(event,turnbookdate):
         pipelineTurn = functions.addMonthYear(event['date'],consts.pipelineTurnNew)
     if event['display'] == '9':
         pipelineTurn.insert(0,{'$match': {'partyType':'Cancel'}})
+    if event['display'] == '10':
+        pipelineTurn.insert(0,{'$match': {'partyid':event['partyid'],'loadingDate':{'$ne':""}}})
     return pipelineTurn
+    
+def pipelineValueReport(event,turnbookdate):
+    pipelineReport = []
+    pipelineReport = consts.pipelineReport
+    try:
+        a=pipelineReport[0]['$match']
+        pipelineReport.pop(0)
+    except KeyError:
+        pass
+    pipelineReport.insert(0,{'$match':{'$and':[{'pochPayment':False},{'loadingDate':{'$lte':event['date']}}]}})
+    return pipelineReport    
