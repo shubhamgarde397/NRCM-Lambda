@@ -1,5 +1,5 @@
 eventName={
-  "method": "displaynew",
+  "method": "lrnos",
   "consider": [
     0,
     0,
@@ -7,5 +7,6 @@ eventName={
     1
   ],
   "user": "shubham",
-  "typeofuser": 1
+  "typeofuser": 1,
+  "tablename":"TurnBook_2020_2021"
 }

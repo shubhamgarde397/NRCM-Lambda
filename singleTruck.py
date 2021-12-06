@@ -11,6 +11,7 @@ import functions
 import re
 
 def pipelineValue(event):
+    print(event)
     pipelineTurn = []
     pipelineTurn = consts.singleTruckPipeline
     try:
@@ -19,5 +20,6 @@ def pipelineValue(event):
     except KeyError:
         pass
     if event['display'] == '11':
-        pipelineTurn.insert(0,{'$match': {'ownerid': event['id']}})
+        pipelineTurn.insert(0,{'$match': {'ownerid': {'$in':event['realIds']}}})
+    print(pipelineTurn)
     return pipelineTurn

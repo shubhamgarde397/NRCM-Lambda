@@ -1,3 +1,4 @@
+import dynamicConstants
 # PIPELINES
 pipeline=[
     {'$addFields': {'newroleid': {'$toObjectId': '$roleid'}}}, 
@@ -10,7 +11,9 @@ singleTruckPipeline=[
     {'$lookup': {'from': 'ownerdetails', 'localField': 'o', 'foreignField': '_id', 'as': 'trucks'}}, 
     {'$lookup': {'from': 'gstdetails', 'localField': 'p', 'foreignField': '_id', 'as': 'parties'}}, 
     {'$lookup': {'from': 'villagenames', 'localField': 'v', 'foreignField': '_id', 'as': 'places'}}, 
-    {'$project': {'partyType': 1, 'turnbookDate': 1, 'loadingDate': 1, 'lrno': 1, 'hamt': 1, 'pochDate': 1, 'pgno': 1, 'truckName': {'$arrayElemAt': ['$trucks', 0]}, 'placeName': {'$arrayElemAt': ['$places', 0]}, 'partyName': {'$arrayElemAt': ['$parties', 0]}}}]
+    {'$project': {'partyType': 1, 'turnbookDate': 1, 'loadingDate': 1, 'lrno': 1, 'hamt': 1, 'pochDate': 1,
+        'pgno': 1, 'truckName': {'$arrayElemAt': ['$trucks', 0]}, 'placeName': {'$arrayElemAt': ['$places', 0]}, 'partyName': {'$arrayElemAt': ['$parties', 0]},
+        'advance': 1, 'balance': 1, 'pochPayment': 1, 'invoice': '', 'complete': 1, 'typeOfLoad': 1, 'completeDate': 1}}]
 
 paymentpipeline=[
     {'$addFields': {'newpartyid': {'$toObjectId': '$partyid'}}},
@@ -51,6 +54,40 @@ pipelineTurnS14=[
     {'$lookup': {'from': 'gstdetails', 'localField': 'newpartyid', 'foreignField': '_id', 'as': 'partyDetails'}}, 
     {'$project': {'truckno': {'$arrayElemAt': ['$ownerDetails.truckno', 0]}, 'partyName': {'$arrayElemAt': ['$partyDetails.name', 0]}, 'loadingDate': 1, 'turnbookDate': 1, 'truckid': {'$toString': {'$arrayElemAt': ['$ownerDetails._id', 0]}}}}, 
     {'$sort': {'loadingDate': 1}}]
+pipelineTurnLocation=[
+    {'$addFields': {'lkl': {'$last': '$locations'}}}, 
+    {'$match': 
+      {
+        #   '$expr': {'$ne': ['$placeid', '$lkl']},
+          'loadingDate': {'$nin': ['']},
+          'complete':False
+      }
+  }, 
+  {'$unwind': {'path': '$locations'}}, 
+  {'$addFields': {'newpartyid': {'$toObjectId': '$partyid'},'newplaceid': {'$toObjectId': '$placeid'}, 'newownerid': {'$toObjectId': '$ownerid'}, 'newLocationid': {'$toObjectId': '$locations'}}}, 
+  {'$lookup': {'from': 'villagenames', 'localField': 'newplaceid', 'foreignField': '_id', 'as': 'villageArray'}}, 
+  {'$lookup': {'from': 'villagenames', 'localField': 'newLocationid', 'foreignField': '_id', 'as': 'locationsArray'}}, 
+  {'$lookup': {'from': 'ownerdetails', 'localField': 'newownerid', 'foreignField': '_id', 'as': 'ownerDetails'}}, 
+  {'$lookup': {'from': 'gstdetails', 'localField': 'newpartyid', 'foreignField': '_id', 'as': 'partyDetails'}}, 
+  {'$group': {'_id': '$_id','oD':{'$push': {'$arrayElemAt': ['$ownerDetails', 0]}}, 'destination':{'$push': {'$arrayElemAt': ['$villageArray.village_name', 0]}},'loadingDate': {'$push': '$loadingDate'}, 'partyType': {'$push': '$partyType'}, 'turnbookDate': {'$push': '$turnbookDate'},'locationDate': {'$push': '$locationDate'}, 'truckno': {'$push': {'$arrayElemAt': ['$ownerDetails.truckno', 0]}}, 'partyName': {'$push': {'$arrayElemAt': ['$partyDetails.name', 0]}}, 'contact': {'$push': {'$arrayElemAt': ['$ownerDetails.contact', 0]}}, 'locationsArray': {'$push': {'$arrayElemAt': ['$locationsArray.village_name', 0]}},'lkl':{'$push': '$lkl'},'placeid':{'$push':'$placeid'}}}, 
+  {'$addFields':{
+            'pE': {'$cond': {'if': {'$lte': [{'$first':'$oD.policyExpiry'}, '2021-11-26']}, 'then': '#D9534F', 
+            'else': {'$cond': {'if': {'$and': [{'$gte': [{'$first':'$oD.policyExpiry'}, '2021-11-26']}, {'$lte': [{'$first':'$oD.policyExpiry'}, '2022-02-26']}]}, 'then': '#FFA500', 'else': '#5CB85C'}}}}, 
+            'dE': {'$cond': {'if': {'$lte': [{'$first':'$oD.drivingLicExpiry'}, '2021-11-26']}, 'then': '#D9534F', 
+            'else': {'$cond': {'if': {'$and': [{'$gte': [{'$first':'$oD.drivingLicExpiry'}, '2021-11-26']}, {'$lte': [{'$first':'$oD.drivingLicExpiry'}, '2022-02-26']}]}, 'then': '#FFA500', 'else': '#5CB85C'}}}}, 
+            'rE': {'$cond': {'if': {'$lte': [{'$first':'$oD.regCardExpiry'}, '2021-11-26']}, 'then': '#D9534F', 
+            'else': {'$cond': {'if': {'$and': [{'$gte': [{'$first':'$oD.regCardExpiry'}, '2021-11-26']}, {'$lte': [{'$first':'$oD.regCardExpiry'}, '2022-02-26']}]}, 'then': '#FFA500', 'else': '#5CB85C'}}}}, 
+            'fE': {'$cond': {'if': {'$lte': [{'$first':'$oD.fitnessExpiry'}, '2021-11-26']}, 'then': '#D9534F', 
+            'else': {'$cond': {'if': {'$and': [{'$gte': [{'$first':'$oD.fitnessExpiry'}, '2021-11-26']}, {'$lte': [{'$first':'$oD.fitnessExpiry'}, '2022-02-26']}]}, 'then': '#FFA500', 'else': '#5CB85C'}}}},
+            'typeOfVehiclefirst':{'$substr':[{'$first':'$oD.typeOfVehicle'},0,1]},
+            'P':{'$cond':{'if':{'$ne':[{'$first':'$oD.pan'},'']},'then':'#5CB85C','else':'#D9534F'}},
+            'A':{'$cond':{'if':{'$eq':[{'$size':'$oD.accountDetails'},0]},'then':'#D9534F','else':'#5CB85C'}},
+            'updateTBL': {'$cond': {'if':{'$eq':[{'$first':'$placeid'}, {'$first':'$lkl'}]},'then':True,'else':False}}}},
+  {'$project': {'updateTBL':1,'pE':1,'dE':1,'rE':1,'fE':1,'P':1,'A':1, 'oD': {'$first':'$oD'},'truckno': {'$first': '$truckno'},'destination': {'$first': '$destination'}, 'partyName': {'$first': '$partyName'}, 'loadingDate': {'$first': '$loadingDate'}, 'turnbookDate': {'$first': '$turnbookDate'}, 'contact': {'$first': '$contact'}, 'partyType': {'$first': '$partyType'}, 'locationsArray': 1, 'locationDate': {'$first': '$locationDate'}}},
+  {'$sort': {'loadingDate': 1}}
+    #update project pipeline, add more lookups, destinations, locations upto now, location dates.
+    # delete and update operations to location and location date, location date must be set to today date and add yesterday tomorrow buttons.
+    ]
 pipelineTurnNew=[{'$match': {
                 '$and': [{'partyType': 'NRCM'}, {'loadingDate': 'changeThis'}, 
                 {'$or': [{'lrno': 0}, {'hamt': ''}, {'placeid': '5bcdecdab6b821389c8abde0'},{'partyid': '5fff37a31f4443d6ec77e078'}]}]}},
@@ -143,6 +180,7 @@ pipelineAccount=[
     {'$match': {'$or': [{'accountDetails': {'$size': 0}}]}},#, {'contactDetails': {'$size': 0}}
     {'$project': {'truckno': 1, 'loadingDate': 1,  'accountDetails':1,'contactDetails':1}}, 
     {'$sort': {'loadingDate': 1}}]
+pipelineLastUnloaded=[{'$sort': {'loadingDate': 1}}]
 pipelineAccountByDY=[
     {'$addFields': {'owner': {'$toObjectId': '$ownerid'}}}, 
     {'$lookup': {'from': 'ownerdetails', 'localField': 'owner', 'foreignField': '_id', 'as': 'trucks'}}, 
@@ -187,7 +225,25 @@ pendingPayment=[
 # PIPELINES
 # CONSTANTS
 mongoConnectionString='mongodb+srv://Shubham:leogarde1!@24728293031365366.zyejm.mongodb.net/NRCM_Information?retryWrites=true&w=majority'
-tables = [{'name':'gstdetails','sort':['name']}, {'name':'ownerdetails','sort':['truckno']},  {'name':'villagenames','sort':['village_name']}]
+tables = [{'name':'gstdetails','sort':['name']}, {'name':'ownerdetails','sort':['truckno']},  {'name':'villagenames','sort':['village_name']},{'name':'missingLRReason','sort':['reason']}]
+tablesNew = [
+    {'name':'gstdetails','aggregate':[[{'$sort':{'name':1}}]],'jsonName':'gstdetails'}, 
+    {'name':'ownerdetails','aggregate':[[{'$match': {'show': True,'empty': True}}, 
+    {'$addFields': {
+            'pE': {'$cond': {'if': {'$lte': ['$policyExpiry', '2021-11-26']}, 'then': '#D9534F', 
+            'else': {'$cond': {'if': {'$and': [{'$gte': ['$policyExpiry', '2021-11-26']}, {'$lte': ['$policyExpiry', '2022-02-26']}]}, 'then': '#FFA500', 'else': '#5CB85C'}}}}, 
+            'dE': {'$cond': {'if': {'$lte': ['$drivingLicExpiry', '2021-11-26']}, 'then': '#D9534F', 
+            'else': {'$cond': {'if': {'$and': [{'$gte': ['$drivingLicExpiry', '2021-11-26']}, {'$lte': ['$drivingLicExpiry', '2022-02-26']}]}, 'then': '#FFA500', 'else': '#5CB85C'}}}}, 
+            'rE': {'$cond': {'if': {'$lte': ['$regCardExpiry', '2021-11-26']}, 'then': '#D9534F', 
+            'else': {'$cond': {'if': {'$and': [{'$gte': ['$regCardExpiry', '2021-11-26']}, {'$lte': ['$regCardExpiry', '2022-02-26']}]}, 'then': '#FFA500', 'else': '#5CB85C'}}}}, 
+            'fE': {'$cond': {'if': {'$lte': ['$fitnessExpiry', '2021-11-26']}, 'then': '#D9534F', 
+            'else': {'$cond': {'if': {'$and': [{'$gte': ['$fitnessExpiry', '2021-11-26']}, {'$lte': ['$fitnessExpiry', '2022-02-26']}]}, 'then': '#FFA500', 'else': '#5CB85C'}}}},
+            'typeOfVehiclefirst':{'$substr':['$typeOfVehicle',0,1]}}}, 
+            {'$sort': {'truckno': 1}}]
+        ],'jsonName':'ownerdetails'},  
+    {'name':'villagenames','aggregate':[[{'$sort':{'village_name':1}}]],'jsonName':'villagenames'},
+    {'name':'missingLRReason','aggregate':[[{'$sort':{'reason':1}}]],'jsonName':'missingLRReason'},
+    {'name':'ownerdetails','aggregate':[[{'$match': {'show': False}}, {'$sort': {'truckno': 1}}]],'jsonName':'hiddenownerdetails'}]
 tables2 = [{'name':'gstdetails','sort':['name']}, {'name':'villagenames','sort':['village_name']}]
 owner =  {'name':'ownerdetails','sort':['truckno']}
 months={"01":31,"02":29,"03":31,"04":30,"05":31,"06":30,"07":31,"08":31,"09":30,"10":31,"11":30,"12":31}

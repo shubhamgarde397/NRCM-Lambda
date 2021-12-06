@@ -60,4 +60,5 @@ def createPipelineForParty(data,types,event):
         pipelineTurn.insert(0,{'$match': {'$and': [{'date': {'$gte': event['frompayment'], '$lte': event['topayment']}}, {'partyid': {'$in':event['partyid']}}]}})
     if types == 'p2':
         pipelineTurn.insert(0,{'$match': {'$and': [{'loadingDate': {'$gte': event['fromloading'], '$lte': event['toloading']}}, {'partyid': {'$in':event['partyid']}}]}})
+    print(pipelineTurn)
     return pipelineTurn

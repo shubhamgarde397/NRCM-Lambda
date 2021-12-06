@@ -15,7 +15,7 @@ def pipelineValue(event):
     if event['option'] == 1:
         pipelineTurn = consts.pipelinePanDateWise
         pipeMatchRemover(pipelineTurn)
-        pipelineTurn.insert(0,{'$match': {'$and': [{'loadingDate': {'$gt': event['from']}}, {'loadingDate': {'$lt': event['to']}}]}} )
+        pipelineTurn.insert(0,{'$match': {'$and': [{'loadingDate': {'$gte': event['from']}}, {'loadingDate': {'$lte': event['to']}}]}} )
     if event['option'] == 2:#All
         pipelineTurn = consts.pipelinePanAll
         pipeMatchRemover(pipelineTurn)
@@ -26,7 +26,7 @@ def pipelineValue(event):
     if event['option'] == 4:#By PartyType AND dATE
         pipelineTurn = consts.pipelinePanTruckData
         pipeMatchRemover(pipelineTurn)
-        pipelineTurn.insert(0,{'$match': {'$and': [{'loadingDate': {'$gt': event['from']}}, {'loadingDate': {'$lt': event['to']}},{'partyType':event['partyType']}]}} )
+        pipelineTurn.insert(0,{'$match': {'$and': [{'loadingDate': {'$gte': event['from']}}, {'loadingDate': {'$lte': event['to']}},{'partyType':event['partyType']}]}} )
     if event['option'] == 5:
         pipelineTurn=consts.pipelineAccountByDY
         pipeMatchRemover(pipelineTurn)
@@ -34,6 +34,11 @@ def pipelineValue(event):
         pipelineTurn=consts.pipelineAccount
         pipeMatchRemover(pipelineTurn)
         pipelineTurn.insert(0,{'$match': {'$and': [{'loadingDate': {'$gte': event['from']}}, {'loadingDate': {'$lte': event['to']}}]}})
+    if event['option'] == 7:
+        pipelineTurn=consts.pipelineLastUnloaded
+        pipeMatchRemover(pipelineTurn)
+        pipelineTurn.insert(0,{'$match': {'$and': [{'lastUnloadingDate': {'$lte': event['todayDate']}}, {'lastUnloadingDate': {'$gte': '2021-11-30'}}]}})
+    print(pipelineTurn)
     return pipelineTurn
     
 def pipeMatchRemover(pipelineTurn):

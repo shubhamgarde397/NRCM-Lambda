@@ -19,7 +19,9 @@ def insertt(user,tableName,event,db,insider):
         try:
             _id = db[functions.createColName(tableName,event,['01','02','03'])].insert_one(functions.insertOrUpdate(tableName,event,'insert'))
             tempResponse = functions.responser(event,tableName,_id)
+            print(tempResponse)
             a = json.loads(json.dumps(tempResponse, default=functions.json_unknown_type_handler))
+            print(a)
             if insider == 'new':
                 a['_id'] += '+'+event['ownerid'] 
             return a

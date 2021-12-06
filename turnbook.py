@@ -14,6 +14,8 @@ def pipelineValue(event,turnbookdate):
     pipelineTurn = []
     if event['display'] == '0':
         pipelineTurn = consts.pipelineTurnS14
+    elif event['display'] == '14':
+        pipelineTurn = consts.pipelineTurnLocation
     else:
         pipelineTurn = consts.pipelineTurn
     try:
@@ -22,7 +24,7 @@ def pipelineValue(event,turnbookdate):
     except KeyError:
         pass
     if event['display'] == '0':
-        pipelineTurn.insert(0,{'$match': {'$and': [{'turnbookDate': {'$gte': event['turnbookDateS14']}}, {'turnbookDate': {'$lte':event['turnbookDate']}}]}})
+        pipelineTurn.insert(0,{'$match': {'$and': [{'turnbookDate': {'$gte': event['turnbookDateS14']}},{'turnbookDate': {'$lte':event['turnbookDate']}}]}})
     if event['display'] == '1':
         pipelineTurn.insert(0,{'$match': {'$and': [{'turnbookDate': {'$gte': turnbookdate}}, {'loadingDate': ''}]}})
     if event['display'] == '2':
@@ -42,6 +44,14 @@ def pipelineValue(event,turnbookdate):
         pipelineTurn.insert(0,{'$match': {'partyType':'Cancel'}})
     if event['display'] == '10':
         pipelineTurn.insert(0,{'$match': {'partyid':event['partyid'],'loadingDate':{'$ne':""}}})
+    if event['display'] == '12':
+        pipelineTurn.insert(0,{'$match': {'invoice':event['invoice']}})
+    if event['display'] == '13':
+        pipelineTurn.insert(0,{'$match': {'lrno':event['lrno']}})
+    if event['display'] == '14':
+        # pipelineTurn=[{'$addFields': {'lkl': {'$last': '$locations'}}}, {'$match': {'$expr': {'$ne': ['$placeid', '$lkl']}, 'loadingDate': {'$nin': ['']}}}]
+        pipelineTurn.insert(0,{'$match':{}})
+    print(pipelineTurn)
     return pipelineTurn
     
 def pipelineValueReport(event,turnbookdate):

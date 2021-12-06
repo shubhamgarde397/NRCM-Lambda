@@ -43,15 +43,17 @@ def constants(event):
     turnbookUpdateNumber = event.get('part') if event.get('part')!=None else 1
     paymentpipeline=consts.paymentpipeline
     paymentpipeline.insert(0,{'$match': {'$and': [{'date': {'$gte': fromDate, '$lte': toDate}}, {'partyid': partyid}]}})
-    tables = [{'name':'gstdetails','sort':['name']}, {'name':'ownerdetails','sort':['truckno']},  {'name':'villagenames','sort':['village_name']}]
+    tables = [{'name':'gstdetails','sort':['name']}, {'name':'ownerdetails','sort':['truckno']},  {'name':'villagenames','sort':['village_name']},{'name':'missingLRReason','sort':['reason']}]
     arr = []
     i = 0
     roleI = 0
     user=event['user']
     tempResponse = []
     tableName = event['tablename'] if (method!='display') and (method!='displaynew') else ''
-
-def responser(event,tableName,_id,many=''):
+# 618fd4d2a7c88f17c3693d1a
+def responser(event,tableName,_id,many='',msg='.'):
+    print('hello')
+    print(msg)
     if tableName == 'villagenames':
         return {'_id': _id.inserted_id,'village_name': event['village_name'],'Status':'VillageInsert'}
     elif tableName == 'ownerdetails':
@@ -70,11 +72,13 @@ def responser(event,tableName,_id,many=''):
     elif tableName == 'turnbook':
         return {'_id':_id.inserted_id,'Status':'TBInsert'}
     elif tableName == '':
-        return {'_id': '','Status':'InsertDuplicate','StatusToSend':'Duplicate Entry Found.'}
+        return {'_id': '','Status':'InsertDuplicate','StatusToSend':('Duplicate Entry Found '+msg)}
     elif tableName == 'partyPayment':
         return {'Status':'PaymentInsert'}
     elif tableName == 'MailDetails':
         return {'_id':_id.inserted_id,'Status':'MailInsert'}
+    elif tableName == 'missingLRReason':
+        return {'_id': _id.inserted_id,'Status':'LRReasonInsert'}
     elif tableName == 'ignore':
         return {'_id': '','Status':'Ignore','StatusToSend':'Server Error dx0562FrCCx!404O. Unknown Error Occured, Server shutdown'}
         
@@ -83,7 +87,7 @@ def insertOrUpdate(tableName,event,method,many='',updatePrint=False):
         if tableName == 'villagenames':
             return {'village_name': event['village_name']}
         elif tableName == 'ownerdetails':
-            return {'truckno': event['truckno'],'oname': event['oname'],'pan': event['pan'],'contact': event['contact'],'drivingLic':event['drivingLic'],'regCard':event['regCard'],'accountDetails':event['accountDetails'],'preferences':event['preferences'],'reference':event['reference']}
+            return {'truckno': event['truckno'],"p":event['p'],"r":event['r'],"d":event['d'],"f":event['f'],"P":event['P'],'oname': event['oname'],'typeOfVehicle':event['typeOfVehicle'],'pan': event['pan'],'contact': event['contact'],"show":True,'empty':True,'drivingLicExpiry':event['drivingLicExpiry'],'policyExpiry':event['policyExpiry'],'regCardExpiry':event['regCardExpiry'],'fitnessExpiry':event['fitnessExpiry'],'dob':event['dob'],'aadhar':event['aadhar'],'accountDetails':event['accountDetails'],'preferences':event['preferences'],'reference':event['reference']}
         elif tableName == 'gstdetails':
             return {'name': event['name'],'gst': event['gst'],'dest': event['dest']}
         elif tableName == 'regularparty':
@@ -105,15 +109,18 @@ def insertOrUpdate(tableName,event,method,many='',updatePrint=False):
             return {'partyid': event['partyid'],'loadingFrom': event['loadingFrom'],'loadingTo': event['loadingTo'],'paymentFrom': event['paymentFrom'],'paymentTo': event['paymentTo'],'balanceFollowMsg': event['balanceFollowMsg'],'balanceFollowAmount': event['balanceFollowAmount'],'mailSentDate': event['mailSentDate']}
         elif tableName == 'turnbook':
             if method == 'insert':
-                return {"placeid":event["placeid"],"loadingDate":event['loadingDate'],"ownerid":event["ownerid"],"partyid":event["partyid"],"partyType":event["partyType"],"turnbookDate":event["turnbookDate"],"entryDate":event["entryDate"],"datetruck":event['turnbookDate']+'_'+event['truckno'],"lrno":event['lrno'],"advance":event['advance'],"balance":event['balance'],"hamt":event['hamt'],"pochDate":event['pochDate'],"pochPayment":event['pochPayment'],"pgno":event['pgno'],"input":event['input'],"paymentid":event['paymentid']}
+                return {"typeOfLoad":"","placeid":event["placeid"],"completeDate":"","complete":False,"locations":[],"locationDate":[],"invoice":event['invoice'],"loadingDate":event['loadingDate'],"ownerid":event["ownerid"],"partyid":event["partyid"],"partyType":event["partyType"],"turnbookDate":event["turnbookDate"],"entryDate":event["entryDate"],"datetruck":event['turnbookDate']+'_'+event['truckno'],"lrno":event['lrno'],"advance":event['advance'],"balance":event['balance'],"hamt":event['hamt'],"pochDate":event['pochDate'],"pochPayment":event['pochPayment'],"pgno":event['pgno'],"input":event['input'],"paymentid":event['paymentid'],"reason":"618fd4d2a7c88f17c3693d1a"}
             if method == 'update':
                 if turnbookUpdateNumber==1:
-                    return {"placeid":event["placeid"],"loadingDate":event['loadingDate'],"lrno":event["lrno"],"ownerid":event["ownerid"],"partyid":event["partyid"],"partyType":event["partyType"],"turnbookDate":event["turnbookDate"],"entryDate":event["entryDate"],"hamt":event["hamt"],"advance":event["advance"],"balance":event["balance"],"pochDate":event["pochDate"],"pochPayment":event["pochPayment"],"pgno":event['pgno'],"paymentid":event['paymentid']}
+                    return {"typeOfLoad":event['typeOfLoad'],"placeid":event["placeid"],"complete":event['complete'],"loadingDate":event['loadingDate'],"locations":event["locations"],"locationDate":event["locationDate"],"lrno":event["lrno"],"ownerid":event["ownerid"],"partyid":event["partyid"],"partyType":event["partyType"],"turnbookDate":event["turnbookDate"],"entryDate":event["entryDate"],"hamt":event["hamt"],"advance":event["advance"],"balance":event["balance"],"pochDate":event["pochDate"],"pochPayment":event["pochPayment"],"pgno":event['pgno'],"paymentid":event['paymentid'],"reason":event['reason'],"invoice":event['invoice']}
                 elif turnbookUpdateNumber==2:
-                    return {"placeid":event["placeid"],"lrno":event["lrno"],"partyid":event["partyid"],"hamt":event["hamt"]}
+                    return {"placeid":event["placeid"],"lrno":event["lrno"],"partyid":event["partyid"],"hamt":event["hamt"],"typeOfLoad":event['typeOfLoad']}
                 else:
                     return {"ownerid":event["ownerid"],"datetruck":event['turnbookDate']+'_'+event['truckno']}
-        
+        elif tableName == 'missingLRReason':
+            return {'reason': event['reason']}
+        elif tableName == 'missingLR':
+            return {'reason': event['reason'],'consider':1 if (event['reason']=='618fd4d2a7c88f17c3693d1a') else 0}
 
 def createColName(tableName,date1,dummy):
     if tableName == 'turnbook':
@@ -140,6 +147,46 @@ def considerArrayData(event,db,tables,roleI,role,username):
             roleI = i
         else:
             arr[i][t['name']].append({})
+            i = i + 1
+            roleI = i
+    if role == 1:
+        col=db['users']
+        res=col.aggregate(pipeline)
+        data={}
+        for i in res:
+            data=i;
+        data = data if len(data)>0 else {'Role': [{'id': 6.0}]}
+        data=data['Role'][0]['id']
+        tempObj={'role':int(data)}
+        arr.append(tempObj)
+    else:
+        data = {'Role': [{'id': 6.0}]}
+        data=data['Role'][0]['id']
+        tempObj={'role':int(data)}
+        arr.append(tempObj)
+    arr.append({'Status':'Display'})
+    return arr
+
+def considerArrayDataNew(event,db,tables,roleI,role,username):
+    arr = []
+    pipeline=consts.pipeline
+    pipeline=removeMatch(pipeline)
+    pipeline.insert(0,{'$match': {'name': username}})
+    
+    i = 0
+    for j in tables:
+        obj = {}
+        obj[j['jsonName']]=[]
+        arr.append(obj)
+    for t in tables:
+        if t['consider'] == 1:
+            print(t['aggregate'][0])
+            for r in db[t['name']].aggregate(t['aggregate'][0]):
+                arr[i][t['jsonName']].append(r)
+            i = i + 1
+            roleI = i
+        else:
+            arr[i][t['jsonName']].append({})
             i = i + 1
             roleI = i
     if role == 1:
@@ -200,6 +247,7 @@ def convertToDict(lst):
     return res_dct
 
 def completeTheMonth(arr):
+
     tp=[]
     j=0
     y = str(arr[0]['_id'][:4])
@@ -234,4 +282,27 @@ def json_unknown_type_handler(x):
     if isinstance(x, bson.ObjectId):
         return str(x)
     raise TypeError("Unknown datetime type")
+    
+def missingLRNOS(a):
+    miss=[]
+    for i in range(len(a)-1):
+        if(a[i+1]['lrno']-a[i]['lrno']!=1):
+            for j in range(a[i+1]['lrno']-a[i]['lrno']-1):
+                miss.append(a[i]['lrno']+(j+1))
+    return miss
+
+def updateAggregate(tables,event):
+    tables[1]['aggregate'][0][1]['$addFields']['pE']['$cond']['if']['$lte'][1]=event['todayDate']
+    tables[1]['aggregate'][0][1]['$addFields']['pE']['$cond']['else']['$cond']['if']['$and'][0]['$gte'][1]=event['todayDate']
+    tables[1]['aggregate'][0][1]['$addFields']['pE']['$cond']['else']['$cond']['if']['$and'][1]['$lte'][1]=event['date3']
+    tables[1]['aggregate'][0][1]['$addFields']['dE']['$cond']['if']['$lte'][1]=event['todayDate']
+    tables[1]['aggregate'][0][1]['$addFields']['dE']['$cond']['else']['$cond']['if']['$and'][0]['$gte'][1]=event['todayDate']
+    tables[1]['aggregate'][0][1]['$addFields']['dE']['$cond']['else']['$cond']['if']['$and'][1]['$lte'][1]=event['date3']
+    tables[1]['aggregate'][0][1]['$addFields']['rE']['$cond']['if']['$lte'][1]=event['todayDate']
+    tables[1]['aggregate'][0][1]['$addFields']['rE']['$cond']['else']['$cond']['if']['$and'][0]['$gte'][1]=event['todayDate']
+    tables[1]['aggregate'][0][1]['$addFields']['rE']['$cond']['else']['$cond']['if']['$and'][1]['$lte'][1]=event['date3']
+    tables[1]['aggregate'][0][1]['$addFields']['fE']['$cond']['if']['$lte'][1]=event['todayDate']
+    tables[1]['aggregate'][0][1]['$addFields']['fE']['$cond']['else']['$cond']['if']['$and'][0]['$gte'][1]=event['todayDate']
+    tables[1]['aggregate'][0][1]['$addFields']['fE']['$cond']['else']['$cond']['if']['$and'][1]['$lte'][1]=event['date3']
+    return tables
     

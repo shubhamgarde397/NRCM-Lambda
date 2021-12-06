@@ -21,3 +21,11 @@ def dynamicC(event,type):
         return event.get('part') if event.get('part')!=None else 1
     elif type == 'addtotbids':
         return event.get('addtotbids') if event.get('addtotbids')!=None else False
+    elif type=='lrnoExists':
+      return True if event.get('lrno')!=None else False
+    elif type == 'getlrno':
+         return event.get('lrno') if event.get('lrno')!=None else ''
+    elif type == 'HiddenEntry':
+         return event.get('HiddenEntry') if event.get('HiddenEntry')!=None else False
+    elif type == 'showUnhideTruckFromTB':
+         return True if event.get('updateTruck')!=None else False
